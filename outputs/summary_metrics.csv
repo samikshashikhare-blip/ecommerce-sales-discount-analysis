@@ -1,7 +1,12 @@
-Metric,Value
-Total Orders,250.0
-Total Units,786.0
-Total Sales,3905446.23
-Total Profit,1227271.77
-Average Order Value,15621.78
-Average Discount,15.28
+metric,value
+Total Orders,99441.0
+Total Customers,96096.0
+Total Sellers,3095.0
+Total Products,32951.0
+Total Item Sales,13591643.7
+Total Freight,2251909.54
+Total Order Value (Items + Freight),15843553.24
+Average Order Value,137.75407637889444
+Average Review Score,4.08642062404257
+Average Delivery Days,10.184282407407409
+Late Delivery Rate,0.07908635522160513

@@ -1,10 +1,11 @@
 """
-E-Commerce Sales & Discount Analysis
--------------------------------------
+Brazilian E-Commerce (Olist) Analysis
+
+The script automatically uses the full dataset in data/raw/ when available.
+Otherwise it uses the included related sample in data/sample/.
+
 Run:
     python src/analysis.py
-
-Outputs are saved in the outputs/ folder.
 """
 
 from pathlib import Path
@@ -12,103 +13,124 @@ import pandas as pd
 import matplotlib.pyplot as plt
 
 ROOT = Path(__file__).resolve().parents[1]
-DATA = ROOT / "data" / "sample_sales.csv"
+RAW = ROOT / "data" / "raw"
+SAMPLE = ROOT / "data" / "sample"
 OUT = ROOT / "outputs"
 OUT.mkdir(exist_ok=True)
 
-df = pd.read_csv(DATA, parse_dates=["order_date"])
+def load_data(folder, sample=False):
+    if sample:
+        names = {
+            "orders": "olist_orders_sample.csv",
+            "items": "olist_order_items_sample.csv",
+            "customers": "olist_customers_sample.csv",
+            "products": "olist_products_sample.csv",
+            "reviews": "olist_order_reviews_sample.csv",
+            "translation": "product_category_name_translation.csv",
+        }
+    else:
+        names = {
+            "orders": "olist_orders_dataset.csv",
+            "items": "olist_order_items_dataset.csv",
+            "customers": "olist_customers_dataset.csv",
+            "products": "olist_products_dataset.csv",
+            "reviews": "olist_order_reviews_dataset.csv",
+            "translation": "product_category_name_translation.csv",
+        }
 
-# Basic metrics
-summary = pd.DataFrame({
-    "Metric": [
-        "Total Orders",
-        "Total Units",
-        "Total Sales",
-        "Total Profit",
-        "Average Order Value",
-        "Average Discount"
-    ],
-    "Value": [
-        len(df),
-        df["units"].sum(),
-        round(df["sales"].sum(), 2),
-        round(df["profit"].sum(), 2),
-        round(df["sales"].mean(), 2),
-        round(df["discount"].mean() * 100, 2)
-    ]
-})
-summary.to_csv(OUT / "summary_metrics.csv", index=False)
+    return {
+        key: pd.read_csv(folder / filename)
+        for key, filename in names.items()
+    }
 
-# Category analysis
-category_summary = (
-    df.groupby("category", as_index=False)
-      .agg(
-          orders=("order_id", "count"),
-          units=("units", "sum"),
-          sales=("sales", "sum"),
-          profit=("profit", "sum"),
-          avg_discount=("discount", "mean")
-      )
-      .sort_values("sales", ascending=False)
-)
-category_summary.to_csv(OUT / "category_summary.csv", index=False)
+use_sample = not (RAW / "olist_orders_dataset.csv").exists()
+data = load_data(SAMPLE if use_sample else RAW, sample=use_sample)
 
-# Discount analysis
-discount_summary = (
-    df.assign(
-        discount_band=pd.cut(
-            df["discount"],
-            bins=[-0.001, 0.05, 0.15, 0.25, 0.31],
-            labels=["0-5%", "5-15%", "15-25%", "25%+"]
-        )
+orders = data["orders"]
+items = data["items"]
+customers = data["customers"]
+products = data["products"]
+reviews = data["reviews"]
+translation = data["translation"]
+
+for c in [
+    "order_purchase_timestamp",
+    "order_delivered_customer_date",
+    "order_estimated_delivery_date"
+]:
+    orders[c] = pd.to_datetime(orders[c], errors="coerce")
+
+items["item_total"] = items["price"] + items["freight_value"]
+
+enriched = (
+    items
+    .merge(
+        orders[[
+            "order_id",
+            "order_purchase_timestamp",
+            "order_delivered_customer_date",
+            "order_estimated_delivery_date"
+        ]],
+        on="order_id",
+        how="left"
     )
-    .groupby("discount_band", observed=False, as_index=False)
-    .agg(
-        orders=("order_id", "count"),
-        sales=("sales", "sum"),
-        profit=("profit", "sum"),
-        avg_sales=("sales", "mean")
+    .merge(
+        products[["product_id", "product_category_name"]],
+        on="product_id",
+        how="left"
+    )
+    .merge(
+        translation,
+        on="product_category_name",
+        how="left"
     )
 )
-discount_summary.to_csv(OUT / "discount_analysis.csv", index=False)
 
-# Monthly trend
-monthly = (
-    df.assign(month=df["order_date"].dt.to_period("M").astype(str))
-      .groupby("month", as_index=False)
-      .agg(sales=("sales", "sum"), profit=("profit", "sum"))
+enriched["category"] = (
+    enriched["product_category_name_english"]
+    .fillna(enriched["product_category_name"])
+    .fillna("Unknown")
 )
-monthly.to_csv(OUT / "monthly_sales.csv", index=False)
 
-# Charts
+enriched["delivery_days"] = (
+    enriched["order_delivered_customer_date"]
+    - enriched["order_purchase_timestamp"]
+).dt.total_seconds() / 86400
+
+summary = {
+    "orders": orders["order_id"].nunique(),
+    "customers": customers["customer_unique_id"].nunique(),
+    "sales": items["price"].sum(),
+    "freight": items["freight_value"].sum(),
+    "average_review": reviews["review_score"].mean(),
+    "median_delivery_days": enriched["delivery_days"].median(),
+}
+
+print("\nOlist E-Commerce Analysis")
+print("-------------------------")
+print("Data source:", "sample included in repository" if use_sample else "full Olist dataset")
+
+for key, value in summary.items():
+    if isinstance(value, float):
+        print(f"{key}: {value:,.2f}")
+    else:
+        print(f"{key}: {value:,}")
+
+category = (
+    enriched.groupby("category")["price"]
+    .sum()
+    .sort_values(ascending=False)
+    .head(10)
+)
+
+category.to_csv(OUT / "category_sales_from_script.csv")
+
 plt.figure(figsize=(9, 5))
-plt.bar(category_summary["category"], category_summary["sales"])
-plt.title("Sales by Category")
-plt.xlabel("Category")
-plt.ylabel("Sales")
-plt.xticks(rotation=25)
+category.sort_values().plot(kind="barh")
+plt.title("Top 10 Categories by Sales")
+plt.xlabel("Sales")
 plt.tight_layout()
-plt.savefig(OUT / "sales_by_category.png", dpi=150)
+plt.savefig(OUT / "category_sales_from_script.png", dpi=160)
 plt.close()
 
-plt.figure(figsize=(9, 5))
-plt.plot(monthly["month"], monthly["sales"], marker="o")
-plt.title("Monthly Sales Trend")
-plt.xlabel("Month")
-plt.ylabel("Sales")
-plt.xticks(rotation=60)
-plt.tight_layout()
-plt.savefig(OUT / "monthly_sales_trend.png", dpi=150)
-plt.close()
-
-plt.figure(figsize=(9, 5))
-plt.bar(discount_summary["discount_band"].astype(str), discount_summary["profit"])
-plt.title("Profit by Discount Band")
-plt.xlabel("Discount Band")
-plt.ylabel("Profit")
-plt.tight_layout()
-plt.savefig(OUT / "profit_by_discount_band.png", dpi=150)
-plt.close()
-
-print("Analysis completed.")
-print(f"Results saved to: {OUT}")
+print("\nAnalysis completed. See outputs/.")

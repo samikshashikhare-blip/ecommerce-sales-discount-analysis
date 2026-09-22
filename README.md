@@ -1,96 +1,135 @@
-# E-Commerce Sales & Discount Analysis
+# Brazilian E-Commerce Sales & Customer Analysis — Olist
 
-A beginner-friendly Data Science portfolio project that analyzes e-commerce sales, profitability, and discount strategies.
+A Data Science portfolio project using the **Brazilian E-Commerce Public Dataset by Olist**.
 
-## Project Objective
+The project demonstrates data preparation, exploratory analysis, business KPIs, visualization,
+and an interactive Streamlit dashboard.
 
-The project answers questions such as:
+## Project Questions
 
-- How much sales and profit are generated?
-- Which product categories generate the most sales?
-- How do different discount levels relate to profit?
-- How do sales change over time?
-- Which regions and categories contribute to performance?
+- How are sales distributed over time?
+- Which product categories generate the most item sales?
+- Which customer states contribute the most orders?
+- What does the review-score distribution look like?
+- How long do deliveries take?
+- How do freight costs compare with item sales?
 
-## Technologies
+## Dataset
+
+The project is based on the Brazilian E-Commerce Public Dataset by Olist.
+
+The original dataset contains related tables for:
+
+- Customers
+- Geolocation
+- Orders
+- Order Items
+- Order Payments
+- Order Reviews
+- Products
+- Sellers
+- Product Category Translation
+
+A smaller related sample is included in `data/sample/` so the GitHub repository remains practical
+to upload and run.
+
+## Important Data Note
+
+The original Olist dataset **does not contain a direct discount field**. Therefore, this project
+does not invent a discount percentage or claim that an observed value is an actual discount.
+
+If discount strategy is required for a separate research project, a dataset containing actual
+discount information should be used, or a clearly documented derived proxy should be justified.
+
+## Tools
 
 - Python
 - Pandas
 - NumPy
 - Matplotlib
+- Jupyter Notebook
 - Streamlit
 
-## Project Structure
+## Repository Structure
 
 ```text
-ecommerce-sales-discount-analysis/
-│
-├── app.py
-├── requirements.txt
-├── README.md
+olist-ecommerce-analysis/
 │
 ├── data/
-│   └── sample_sales.csv
+│   ├── README.md
+│   └── sample/
+│
+├── notebooks/
+│   └── olist_eda.ipynb
+│
+├── outputs/
+│   ├── summary_metrics.csv
+│   ├── category_summary.csv
+│   ├── monthly_sales.csv
+│   ├── state_summary.csv
+│   ├── review_summary.csv
+│   └── charts
 │
 ├── src/
 │   └── analysis.py
 │
-├── outputs/
-│   └── generated charts and CSV summaries
-│
-└── notebooks/
+├── app.py
+├── requirements.txt
+└── README.md
 ```
 
 ## How to Run
 
-### 1. Clone the repository
-
-```bash
-git clone YOUR_GITHUB_REPOSITORY_URL
-cd ecommerce-sales-discount-analysis
-```
-
-### 2. Install dependencies
+### Install packages
 
 ```bash
 pip install -r requirements.txt
 ```
 
-### 3. Run the analysis
+### Run the Python analysis
+
+For the complete Olist dataset, put the original CSV files in `data/raw/` and run:
 
 ```bash
 python src/analysis.py
 ```
 
-The generated CSV summaries and charts will appear in `outputs/`.
-
-### 4. Run the interactive dashboard
+### Run the dashboard
 
 ```bash
 streamlit run app.py
 ```
 
-## Dataset
+## Key Metrics
 
-The repository contains a small sample dataset created for demonstration so that the project can be run immediately.
+The analysis produces:
 
-For a college/research version, replace it with a properly licensed real-world dataset and document the source and license in this README.
+- Total orders
+- Total customers
+- Total sellers
+- Total products
+- Total item sales
+- Total freight
+- Average order value
+- Average review score
+- Median delivery time
+- Late-delivery rate
 
-## Important Note About Discount Analysis
+## Limitations
 
-This project is intended to explore relationships in sales data. A higher or lower profit observed for a discount band does **not by itself prove that the discount caused the change**. A stronger research project could control for product category, price, seasonality, region, and other factors.
+The dataset is historical and anonymized. The analysis is descriptive.
+A relationship observed in the data should not automatically be interpreted as causal.
 
-## Possible Future Improvements
+## Future Improvements
 
 - Add customer segmentation
-- Add sales forecasting
-- Compare machine-learning models
-- Add correlation analysis
-- Add Power BI dashboard
-- Use a larger real-world e-commerce dataset
-- Add automated data validation
-- Deploy the Streamlit dashboard
+- Add predictive modeling
+- Add delivery-time prediction
+- Add review-score prediction
+- Integrate the Power BI dashboard
+- Add a separate real-world discount dataset for discount-strategy research
 
 ## Author
 
-Add your name and MSc Data Science details here.
+**Samiksha Shikhare**  
+MSc Data Science
